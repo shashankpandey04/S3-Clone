@@ -64,6 +64,22 @@
             box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
             margin-bottom: 1.5rem;
         }
+        .access-badge {
+            margin-right: 5px;
+        }
+        .access-badge.read {
+            background-color: #198754;
+        }
+        .access-badge.write {
+            background-color: #0d6efd;
+        }
+        .access-badge.delete {
+            background-color: #dc3545;
+        }
+        .form-check-input.access-checkbox:checked {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
     </style>
 </head>
 <body>
@@ -84,7 +100,7 @@
                     <li class="nav-item">
                         <a class="nav-link active" href="/api/keys">API Keys</a>
                     </li>
-                    <li class="nav-item">
+                    <li class="nav-item"></li>
                         <a class="nav-link" href="/settings">Settings</a>
                     </li>
                 </ul>
@@ -111,7 +127,7 @@
                                 <i class="bi bi-speedometer2"></i> Dashboard
                             </a>
                         </li>
-                        <li class="nav-item"></li>
+                        <li class="nav-item">
                             <a class="nav-link" href="/mybuckets">
                                 <i class="bi bi-bucket"></i> My Buckets
                             </a>
@@ -157,7 +173,7 @@
                     <div class="card-body">
                         <div class="mb-3">
                             <p class="mb-1">You have {{ api_keys|length }}/5 API keys</p>
-                            <p class="api-keys-note mb-3"><i class="bi bi-shield-lock"></i> Keep your API keys secure. They provide full access to your account.</p>
+                            <p class="api-keys-note mb-3"><i class="bi bi-shield-lock"></i> Keep your API keys secure. They provide access to your account based on the permissions you grant.</p>
                         </div>
 
                         {% if api_keys %}
@@ -166,6 +182,7 @@
                                     <thead>
                                         <tr>
                                             <th>API Key</th>
+                                            <th>Access Permissions</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -178,6 +195,19 @@
                                                     <button class="copy-btn btn btn-sm btn-secondary" data-key="{{ key }}">
                                                         <i class="bi bi-clipboard"></i> Copy
                                                     </button>
+                                                </div>
+                                            </td>
+                                            <td class="key-permissions" data-key="{{ key }}">
+                                                <div class="d-flex">
+                                                    {% if key_permissions.get(key, 0)|int % 2 == 1 %}
+                                                        <span class="badge access-badge read me-1">READ</span>
+                                                    {% endif %}
+                                                    {% if key_permissions.get(key, 0)|int > 1 and key_permissions.get(key, 0)|int % 4 >= 2 %}
+                                                        <span class="badge access-badge write me-1">WRITE</span>
+                                                    {% endif %}
+                                                    {% if key_permissions.get(key, 0)|int >= 4 %}
+                                                        <span class="badge access-badge delete">DELETE</span>
+                                                    {% endif %}
                                                 </div>
                                             </td>
                                             <td>
@@ -210,6 +240,31 @@
         </div>
     </div>
 
+    <!-- Access Permissions Dialog Template -->
+    <template id="access-permissions-modal">
+        <div class="p-3">
+            <h5 class="mb-3">Select API Key Permissions</h5>
+            <div class="form-check mb-2">
+                <input class="form-check-input access-checkbox" type="checkbox" value="READ" id="readAccess" checked>
+                <label class="form-check-label" for="readAccess">
+                    <strong>READ</strong> - Allow retrieving objects and listing buckets
+                </label>
+            </div>
+            <div class="form-check mb-2">
+                <input class="form-check-input access-checkbox" type="checkbox" value="WRITE" id="writeAccess" checked>
+                <label class="form-check-label" for="writeAccess">
+                    <strong>WRITE</strong> - Allow creating and updating objects
+                </label>
+            </div>
+            <div class="form-check mb-2">
+                <input class="form-check-input access-checkbox" type="checkbox" value="DELETE" id="deleteAccess" checked>
+                <label class="form-check-label" for="deleteAccess">
+                    <strong>DELETE</strong> - Allow deleting objects and buckets
+                </label>
+            </div>
+        </div>
+    </template>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -231,6 +286,15 @@
                 });
             });
 
+            // Helper function to get selected permissions
+            function getSelectedPermissions() {
+                const permissions = [];
+                document.querySelectorAll('.access-checkbox:checked').forEach(cb => {
+                    permissions.push(cb.value);
+                });
+                return permissions;
+            }
+
             // Delete API key
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
@@ -251,7 +315,8 @@
                                 },
                                 body: JSON.stringify({
                                     delete: true,
-                                    api_key: key
+                                    api_key: key,
+                                    access_list: ["READ", "WRITE", "DELETE"] // Default to full access for deletion
                                 })
                             })
                             .then(response => response.json())
@@ -283,15 +348,35 @@
             document.querySelectorAll('.regenerate-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                     const key = this.getAttribute('data-key');
+                    
+                    // Get the access permissions modal template and convert to HTML string
+                    const modalTemplate = document.querySelector('#access-permissions-modal');
+                    const tempDiv = document.createElement('div');
+                    tempDiv.appendChild(modalTemplate.content.cloneNode(true));
+                    const modalContent = tempDiv.innerHTML;
+                    
                     Swal.fire({
-                        title: 'Regenerate API Key?',
-                        text: 'The current key will no longer work',
-                        icon: 'warning',
+                        title: 'Regenerate API Key',
+                        html: modalContent,
                         showCancelButton: true,
-                        confirmButtonText: 'Yes, regenerate it',
-                        cancelButtonText: 'Cancel'
+                        confirmButtonText: 'Regenerate Key',
+                        cancelButtonText: 'Cancel',
+                        focusConfirm: false,
+                        preConfirm: () => {
+                            return getSelectedPermissions();
+                        }
                     }).then((result) => {
                         if (result.isConfirmed) {
+                            const accessList = result.value;
+                            if (accessList.length === 0) {
+                                Swal.fire({
+                                    title: 'Error!',
+                                    text: 'You must select at least one permission',
+                                    icon: 'error'
+                                });
+                                return;
+                            }
+                            
                             fetch('/api/keys', {
                                 method: 'POST',
                                 headers: {
@@ -299,7 +384,8 @@
                                 },
                                 body: JSON.stringify({
                                     regenerate: true,
-                                    api_key: key
+                                    api_key: key,
+                                    access_list: accessList
                                 })
                             })
                             .then(response => response.json())
@@ -326,35 +412,66 @@
                     });
                 });
             });
-
+            
             // Create new API key
             const createKeyHandler = function() {
-                fetch('/api/keys', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        create: true
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.api_key) {
-                        Swal.fire({
-                            title: 'New API Key Created!',
-                            html: `Your new API key:<br><strong>${data.api_key}</strong><br><br>Make sure to copy it now!`,
-                            icon: 'success',
-                            confirmButtonText: 'OK'
-                        }).then(() => {
-                            location.reload();
-                        });
-                    } else {
-                        Swal.fire({
-                            title: 'Error!',
-                            text: data.error,
-                            icon: 'error',
-                            confirmButtonText: 'OK'
+                // Get the access permissions modal template and convert to HTML string
+                const modalTemplate = document.querySelector('#access-permissions-modal');
+                const tempDiv = document.createElement('div');
+                tempDiv.appendChild(modalTemplate.content.cloneNode(true));
+                const modalContent = tempDiv.innerHTML;
+                
+                Swal.fire({
+                    title: 'Create New API Key',
+                    html: modalContent,
+                    showCancelButton: true,
+                    confirmButtonText: 'Create Key',
+                    cancelButtonText: 'Cancel',
+                    focusConfirm: false,
+                    preConfirm: () => {
+                        return getSelectedPermissions();
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const accessList = result.value;
+                        if (accessList.length === 0) {
+                            Swal.fire({
+                                title: 'Error!',
+                                text: 'You must select at least one permission',
+                                icon: 'error'
+                            });
+                            return;
+                        }
+                        
+                        fetch('/api/keys', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                create: true,
+                                access_list: accessList
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.api_key) {
+                                Swal.fire({
+                                    title: 'New API Key Created!',
+                                    html: `Your new API key:<br><strong>${data.api_key}</strong><br><br>Make sure to copy it now!`,
+                                    icon: 'success',
+                                    confirmButtonText: 'OK'
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    title: 'Error!',
+                                    text: data.error,
+                                    icon: 'error',
+                                    confirmButtonText: 'OK'
+                                });
+                            }
                         });
                     }
                 });

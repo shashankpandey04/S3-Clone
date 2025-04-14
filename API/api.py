@@ -4,7 +4,9 @@ from bson import ObjectId
 from functools import wraps
 import os
 import datetime
-from Utils.utils import buckets_col, files_col, users_col, get_user_by_api_key, bucket_exists, get_bucket_path
+from Utils.utils import (buckets_col, files_col, users_col, 
+                         get_user_by_api_key, bucket_exists, get_bucket_path, 
+                         map_api_access, check_api_access)
 from dotenv import load_dotenv
 
 api_router = Blueprint("api", __name__)
@@ -28,6 +30,7 @@ def require_api_key(f):
     return decorated_function
 
 # ==== API ROUTES ====
+# ==== API ROUTES ====
 @api_router.route("/", methods=["GET"])
 def api_root():
     return render_template("api.html")
@@ -36,6 +39,9 @@ def api_root():
 @require_api_key
 def api_list_buckets():
     user_id = request.user_id
+    api_key = request.headers.get('X-API-Key')
+    if not check_api_access(api_key, "READ"):
+        return jsonify({"error": "Access denied"}), 403
     buckets = list(buckets_col.find({"owner_id": user_id}, {"_id": 0}))
     return jsonify(buckets), 200
 
@@ -43,9 +49,11 @@ def api_list_buckets():
 @require_api_key
 def api_create_bucket():
     user_id = request.user_id
+    api_key = request.headers.get('X-API-Key')
+    if not check_api_access(api_key, "WRITE"):
+        return jsonify({"error": "Access denied"}), 403
     data = request.json
     name = data.get("name")
-    
     if not name:
         return jsonify({"error": "Bucket name is required"}), 400
     
@@ -53,6 +61,7 @@ def api_create_bucket():
         return jsonify({"error": "Bucket already exists"}), 400
     
     os.makedirs(get_bucket_path(name, user_id), exist_ok=True)
+    
     buckets_col.insert_one({
         "name": name,
         "owner_id": user_id,
@@ -65,6 +74,9 @@ def api_create_bucket():
 @require_api_key
 def api_delete_bucket(bucket):
     user_id = request.user_id
+    api_key = request.headers.get('X-API-Key')
+    if not check_api_access(api_key, "DELETE"):
+        return jsonify({"error": "Access denied"}), 403
     info = buckets_col.find_one({"name": bucket, "owner_id": user_id})
     if not info:
         return jsonify({"error": "Bucket not found"}), 404
@@ -82,6 +94,9 @@ def api_delete_bucket(bucket):
 @require_api_key
 def api_list_files(bucket):
     user_id = request.user_id
+    api_key = request.headers.get('X-API-Key')
+    if not check_api_access(api_key, "READ"):
+        return jsonify({"error": "Access denied"}), 403
     if not bucket_exists(bucket, user_id):
         return jsonify({"error": "Bucket not found"}), 404
     
@@ -92,6 +107,9 @@ def api_list_files(bucket):
 @require_api_key
 def api_upload_file(bucket):
     user_id = request.user_id
+    api_key = request.headers.get('X-API-Key')
+    if not check_api_access(api_key, "WRITE"):
+        return jsonify({"error": "Access denied"}), 403
     if not bucket_exists(bucket, user_id):
         return jsonify({"error": "Bucket not found"}), 404
     
@@ -121,6 +139,9 @@ def api_upload_file(bucket):
 @require_api_key
 def api_delete_file(bucket, filename):
     user_id = request.user_id
+    api_key = request.headers.get('X-API-Key')
+    if not check_api_access(api_key, "DELETE"):
+        return jsonify({"error": "Access denied"}), 403
     path = get_bucket_path(bucket, user_id)
     file_path = os.path.join(path, filename)
     

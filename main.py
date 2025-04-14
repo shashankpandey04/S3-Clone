@@ -8,7 +8,9 @@ import secrets
 from bson import ObjectId
 from dotenv import load_dotenv
 
-from Utils.utils import buckets_col, files_col, users_col, generate_api_key, get_bucket_path, bucket_exists
+from Utils.utils import (buckets_col, files_col, 
+    users_col, generate_api_key, get_bucket_path, 
+    bucket_exists, api_col, map_api_access, check_api_access)
 from API.api import api_router
 
 load_dotenv()
@@ -322,20 +324,40 @@ def api_keys():
         
         if request.json.get("delete"):
             api_key = request.json.get("api_key")
+            if not api_key:
+                return jsonify({"error": "API key is required."}), 400
+            access_list = request.json.get("access_list", [])
+            if not access_list:
+                return jsonify({"error": "Access list is required."}), 400
+            if not isinstance(access_list, list):
+                return jsonify({"error": "Access list must be a list."}), 400
+            if not all(isinstance(access, str) for access in access_list):
+                return jsonify({"error": "Access list must contain strings."}), 400
+            access_level = map_api_access(access_list)
+            api_col.insert_one({
+                "api_key": api_key,
+                "owner_id": user_id,
+                "access_level": access_level,
+                "created_at": datetime.datetime.now()
+            })
             if api_key in current_user.api_keys:
                 users_col.update_one({"_id": ObjectId(user_id)}, {"$pull": {"api_keys": api_key}})
                 users_col.update_one({"_id": ObjectId(user_id)}, {"$push": {"recent_activity": {"action": "delete_api_key", "api_key": api_key, "timestamp": datetime.datetime.now(), "files": "API key deleted"}}})
-                if api_key in current_user.api_keys:
-                    current_user.api_keys.remove(api_key)
                 return jsonify({"message": "API key deleted."}), 200
             return jsonify({"error": "API key not found."}), 404
         if request.json.get("regenerate"):
             api_key = request.json.get("api_key")
+            if not api_key:
+                return jsonify({"error": "API key is required."}), 400
+            access_list = request.json.get("access_list", [])
+            if not access_list:
+                return jsonify({"error": "Access list is required."}), 400
             if api_key in current_user.api_keys:
                 new_key = generate_api_key()
                 users_col.update_one({"_id": ObjectId(user_id)}, {"$set": {"api_keys.$[elem]": new_key}}, array_filters=[{"elem": api_key}])
                 users_col.update_one({"_id": ObjectId(user_id)}, {"$push": {"recent_activity": {"action": "regenerate_api_key", "api_key": new_key, "timestamp": datetime.datetime.now(), "files": "API Key Regenerated"}}})
-                current_user.api_keys[current_user.api_keys.index(api_key)] = new_key
+                api_col.update_one({"api_key": api_key}, {"$set": {"api_key": new_key}})
+                api_col.update_one({"api_key": new_key}, {"$set": {"access_level": map_api_access(access_list)}})
                 return jsonify({"api_key": new_key}), 200
             return jsonify({"error": "API key not found."}), 404
         if request.json.get("create"):
@@ -343,18 +365,29 @@ def api_keys():
                 return jsonify({"error": "Maximum number of API keys reached."}), 400
             if not user_id:
                 return jsonify({"error": "User not found."}), 404
+            access_list = request.json.get("access_list", [])
+            if not access_list:
+                return jsonify({"error": "Access list is required."}), 400
+            if not isinstance(access_list, list):
+                return jsonify({"error": "Access list must be a list."}), 400
             new_key = generate_api_key()
             users_col.update_one({"_id": ObjectId(user_id)}, {"$push": {"api_keys": new_key}})
             users_col.update_one({"_id": ObjectId(user_id)}, {"$push": {"recent_activity": {"action": "create_api_key", "api_key": new_key, "timestamp": datetime.datetime.now(), "files": "API Key Created"}}})
-            current_user.api_keys.append(new_key)
-            if not current_user.api_keys:
-                current_user.api_keys = []
+            api_col.insert_one({
+                "api_key": new_key,
+                "owner_id": user_id,
+                "access_level": map_api_access(access_list),
+                "created_at": datetime.datetime.now()
+            })
             return jsonify({"api_key": new_key}), 201
         if request.json.get("list"):
             api_keys = current_user.api_keys
             return jsonify({"api_keys": api_keys}), 200
     user = users_col.find_one({"_id": ObjectId(user_id)})
-    return render_template("api_keys.html", api_keys=user["api_keys"], user=user)
+    keys = user.get("api_keys", [])
+    api_data_list = api_col.find({"api_key": {"$in": keys}})
+    key_permissions = {entry["api_key"]: entry.get("access_level", 0) for entry in api_data_list}
+    return render_template("api_keys.html", api_keys=user["api_keys"], user=user, key_permissions=key_permissions)
 
 @app.route("/delete_account", methods=["POST"])
 @login_required
