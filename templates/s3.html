@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>S3 Dashboard - 2025</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <style>
+    .sidebar {
+      min-height: calc(100vh - 56px);
+      background-color: #f8f9fa;
+      border-right: 1px solid #dee2e6;
+    }
+    .nav-link {
+      color: #495057;
+    }
+    .nav-link.active {
+      background-color: #e9ecef;
+      color: #212529;
+    }
+    .stats-card {
+      transition: transform 0.3s;
+    }
+    .stats-card:hover {
+      transform: translateY(-5px);
+    }
+    .welcome-banner {
+      background: linear-gradient(135deg, #4b79a1, #283e51);
+      color: white;
+    }
+    .bucket-card {
+      transition: transform 0.3s ease;
+    }
+    .bucket-card:hover {
+      transform: translateY(-5px);
+    }
+    .file-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">S3 Clone</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="/dashboard">Dashboard</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" href="/mybuckets">Buckets</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/api/keys">API Keys</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/settings">Settings</a>
+          </li>
+        </ul>
+        <div class="d-flex">
+          <span class="navbar-text me-3">
+            <i class="bi bi-person-circle"></i> {{ current_user.firstname }} {{ current_user.lastname }}
+          </span>
+          <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-lg-2 d-none d-lg-block sidebar pt-3">
+        <div class="d-flex flex-column p-3">
+          <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-2 mb-2 text-muted">
+            <span>Storage</span>
+          </h6>
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <a class="nav-link" href="/dashboard">
+                <i class="bi bi-speedometer2"></i> Dashboard
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link active" href="/mybuckets">
+                <i class="bi bi-bucket"></i> My Buckets
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/api/keys">
+                <i class="bi bi-key"></i> API Keys
+              </a>
+            </li>
+          </ul>
+          
+          <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-2 text-muted">
+            <span>User</span>
+          </h6>
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <a class="nav-link" href="/settings"></a>
+                <i class="bi bi-gear"></i> Settings
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/logout">
+                <i class="bi bi-box-arrow-right"></i> Logout
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <main class="col-lg-10 col-md-12 ms-auto px-4 py-4">
+        <!-- Create Bucket Form -->
+        <div class="card shadow mb-4">
+          <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold">Create New Bucket</h6>
+          </div>
+          <div class="card-body">
+            <form id="createBucketForm" class="row g-3 align-items-center">
+              <div class="col-sm-8">
+                <input type="text" id="bucketName" class="form-control" placeholder="New Bucket Name" required>
+              </div>
+              <div class="col-sm-4">
+                <button type="submit" class="btn btn-primary w-100">
+                  <i class="bi bi-plus-circle"></i> Create Bucket
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Buckets List -->
+        {% for bucket in buckets %}
+        <div class="card shadow mb-4 bucket-card">
+          <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold d-flex align-items-center"></h6>
+              <i class="bi bi-bucket me-2"></i> {{ bucket.name }}
+            </h6>
+            <button class="btn btn-danger btn-sm" onclick="deleteBucket('{{ bucket.name }}')">
+              <i class="bi bi-trash"></i> Delete Bucket
+            </button>
+          </div>
+          
+          <div class="card-body">
+            <!-- Upload File Form -->
+            <div class="card bg-light mb-4">
+              <div class="card-body">
+                <form class="row g-3 align-items-end" onsubmit="uploadFile(event, '{{ bucket.name }}')">
+                  <div class="col-md-6">
+                    <label class="form-label">Upload File</label>
+                    <input type="file" name="file" class="form-control" required id="fileInput">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Access</label>
+                    <select name="is_public" class="form-select">
+                      <option value="false">Private</option>
+                      <option value="true">Public</option>
+                    </select>
+                  </div>
+                  <div class="col-md-3">
+                    <button type="submit" class="btn btn-success w-100">
+                      <i class="bi bi-cloud-upload"></i> Upload
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- Files List -->
+            {% if bucket.files %}
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>File</th>
+                    <th>Uploaded</th>
+                    <th>Access</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for file in bucket.files %}
+                  <tr>
+                    <td>
+                      <div class="d-flex align-items-center">
+                        <i class="bi bi-file-earmark me-2"></i>
+                        {{ file.filename }}
+                      </div>
+                    </td>
+                    <td>{{ file.uploaded_at }}</td>
+                    <td>
+                      {% if file.is_public %}
+                      <span class="badge bg-success">Public</span>
+                      {% else %}
+                      <span class="badge bg-secondary">Private</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <div class="btn-group btn-group-sm">
+                        {% if file.is_public %}
+                        <a href="/files/{{ file.owner_id }}/{{ file.bucket }}/{{ file.filename }}" target="_blank" class="btn btn-primary">
+                          <i class="bi bi-eye"></i>
+                        </a>
+                        {% endif %}
+                        <button class="btn btn-danger" onclick="deleteFile('{{ file.bucket }}', '{{ file.filename }}')">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+              <i class="bi bi-folder-x display-4 mb-3"></i>
+              <p>No files in this bucket yet</p>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        
+        {% if not buckets or buckets|length == 0 %}
+        <div class="alert alert-info text-center py-5" role="alert">
+          <i class="bi bi-cloud display-4 mb-3"></i>
+          <h4 class="alert-heading">No Buckets Found</h4>
+          <p>Create your first bucket to get started</p>
+        </div>
+        {% endif %}
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Create Bucket
+    document.getElementById("createBucketForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const bucketName = document.getElementById("bucketName").value.trim();
+      if (!bucketName) return;
+
+      const res = await fetch("/buckets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: bucketName })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message);
+        location.reload();
+      } else {
+        alert(data.error || "Failed to create bucket.");
+      }
+    });
+
+    // Upload File
+    async function uploadFile(event, bucketName) {
+      event.preventDefault();
+      const form = event.target;
+      const fileInput = form.querySelector('input[type="file"]');
+      const isPublic = form.querySelector('select[name="is_public"]').value;
+      const file = fileInput.files[0];
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("is_public", isPublic);
+
+      const res = await fetch(`/upload/${bucketName}`, {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert("File uploaded!");
+        location.reload();
+      } else {
+        alert(data.error || "Upload failed.");
+      }
+    }
+
+    // Delete Bucket
+    async function deleteBucket(bucketName) {
+      if (!confirm(`Delete bucket "${bucketName}"? This action cannot be undone.`)) return;
+      
+      const res = await fetch(`/buckets/${bucketName}`, { 
+        method: "DELETE" 
+      });
+      
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message);
+        location.reload();
+      } else {
+        alert(data.error || "Failed to delete bucket.");
+      }
+    }
+
+    // Delete File
+    async function deleteFile(bucket, filename) {
+      if (!confirm(`Delete file "${filename}" from "${bucket}"?`)) return;
+      
+      const res = await fetch(`/files/${bucket}/${filename}`, { 
+        method: "DELETE" 
+      });
+      
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message);
+        location.reload();
+      } else {
+        alert(data.error || "Failed to delete file.");
+      }
+    }
+  </script>
+</body>
+</html>

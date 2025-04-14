@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S3 Clone Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .sidebar {
+            min-height: calc(100vh - 56px);
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+        }
+        .nav-link {
+            color: #495057;
+        }
+        .nav-link.active {
+            background-color: #e9ecef;
+            color: #212529;
+        }
+        .stats-card {
+            transition: transform 0.3s;
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        .welcome-banner {
+            background: linear-gradient(135deg, #4b79a1, #283e51);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">S3 Clone</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/mybuckets">Buckets</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/api/keys">API Keys</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/settings">Settings</a>
+                    </li>
+                </ul>
+                <div class="d-flex">
+                    <span class="navbar-text me-3">
+                        <i class="bi bi-person-circle"></i> {{ user.firstname }} {{ user.lastname }}
+                    </span>
+                    <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-2 d-none d-lg-block sidebar pt-3">
+                <div class="d-flex flex-column p-3">
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-2 mb-2 text-muted">
+                        <span>Storage</span>
+                    </h6>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/dashboard">
+                                <i class="bi bi-speedometer2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/mybuckets">
+                                <i class="bi bi-bucket"></i> My Buckets
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/api/keys">
+                                <i class="bi bi-key"></i> API Keys
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-2 text-muted">
+                        <span>User</span>
+                    </h6>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/settings">
+                                <i class="bi bi-gear"></i> Settings
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/logout">
+                                <i class="bi bi-box-arrow-right"></i> Logout
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <main class="col-lg-10 col-md-12 ms-auto px-4 py-4">
+                <div class="welcome-banner p-4 mb-4 rounded shadow">
+                    <h2>Welcome back, {{ user.firstname }}!</h2>
+                    <p>{{ user.company }} • Member since {{ user.created_at.strftime('%B %d, %Y') }}</p>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-0 shadow stats-card h-100">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-uppercase mb-1">Total Buckets</div>
+                                        <div class="h5 mb-0 font-weight-bold">{{ user.total_buckets if user.total_buckets else 0 }}</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-bucket fs-2 text-primary"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-0 shadow stats-card h-100">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-uppercase mb-1">Total Files</div>
+                                        <div class="h5 mb-0 font-weight-bold">{{ user.total_files if user.total_files else 0 }}</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-file-earmark fs-2 text-success"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-0 shadow stats-card h-100">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-uppercase mb-1">Storage Used</div>
+                                        <div class="h5 mb-0 font-weight-bold">{{ user.storage_used if user.storage_used else "0 MB" }}</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-hdd fs-2 text-info"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-0 shadow stats-card h-100">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-uppercase mb-1">API Keys</div>
+                                        <div class="h5 mb-0 font-weight-bold">{{ user.api_keys|length if user.api_keys else 0 }}/5</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-key fs-2 text-warning"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-xl-8 col-lg-7">
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                <h6 class="m-0 font-weight-bold">Recent Activity</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Action</th>
+                                                <th>Bucket</th>
+                                                <th>File</th>
+                                                <th>Time</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% if user.recent_activity %}
+                                                {% for activity in user.recent_activity %}
+                                                <tr>
+                                                    <td>{{ activity.action }}</td>
+                                                    <td>{{ activity.bucket }}</td>
+                                                    <td>{{ activity.files }}</td>
+                                                    <td>{{ activity.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            {% else %}
+                                                <tr>
+                                                    <td colspan="4" class="text-center">No recent activity</td>
+                                                </tr>
+                                            {% endif %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-4 col-lg-5">
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                <h6 class="m-0 font-weight-bold">Quick Actions</h6>
+                            </div>
+                            <div class="card-body">
+                                <a href="/mybuckets" class="btn btn-primary btn-block mb-3 w-100">
+                                    <i class="bi bi-plus-circle"></i> Create New Bucket
+                                </a>
+                                <a href="/api/keys" class="btn btn-success btn-block mb-3 w-100">
+                                    <i class="bi bi-key"></i> Manage API Keys
+                                </a>
+                                <a href="/settings" class="btn btn-info btn-block mb-3 w-100 text-white">
+                                    <i class="bi bi-gear"></i> Account Settings
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="card shadow">
+                            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                <h6 class="m-0 font-weight-bold">Account Summary</h6>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Name:</strong> {{ user.firstname }} {{ user.lastname }}</p>
+                                <p><strong>Email:</strong> {{ user.email }}</p>
+                                <p><strong>Company:</strong> {{ user.company }}</p>
+                                <p><strong>Member since:</strong> {{ user.created_at.strftime('%B %d, %Y') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

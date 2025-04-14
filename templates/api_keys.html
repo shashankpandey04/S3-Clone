@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Keys - S3 Clone</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .sidebar {
+            min-height: calc(100vh - 56px);
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+        }
+        .nav-link {
+            color: #495057;
+        }
+        .nav-link.active {
+            background-color: #e9ecef;
+            color: #212529;
+        }
+        .section-header {
+            background: linear-gradient(135deg, #4b79a1, #283e51);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 0.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .api-key-value {
+            display: flex;
+            align-items: center;
+        }
+        .copy-btn {
+            margin-left: 10px;
+            border: none;
+            background-color: #6c757d;
+            color: white;
+            border-radius: 3px;
+            padding: 2px 8px;
+            font-size: 0.8rem;
+        }
+        .api-keys-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        .api-keys-table th, .api-keys-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            background-color: #f8f9fa;
+            border-radius: 0.25rem;
+        }
+        .api-keys-note {
+            color: #6c757d;
+            font-style: italic;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">S3 Clone</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item"></li>
+                        <a class="nav-link" href="/mybuckets">Buckets</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/api/keys">API Keys</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/settings">Settings</a>
+                    </li>
+                </ul>
+                <div class="d-flex">
+                    <span class="navbar-text me-3">
+                        <i class="bi bi-person-circle"></i> {{ user.firstname }} {{ user.lastname }}
+                    </span>
+                    <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-2 d-none d-lg-block sidebar pt-3">
+                <div class="d-flex flex-column p-3">
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-2 mb-2 text-muted">
+                        <span>Storage</span>
+                    </h6>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/dashboard">
+                                <i class="bi bi-speedometer2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item"></li>
+                            <a class="nav-link" href="/mybuckets">
+                                <i class="bi bi-bucket"></i> My Buckets
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/api/keys">
+                                <i class="bi bi-key"></i> API Keys
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-2 text-muted">
+                        <span>User</span>
+                    </h6>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/settings">
+                                <i class="bi bi-gear"></i> Settings
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/logout">
+                                <i class="bi bi-box-arrow-right"></i> Logout
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <main class="col-lg-10 col-md-12 ms-auto px-4 py-4">
+                <div class="section-header rounded shadow">
+                    <h2>Manage API Keys</h2>
+                    <p class="mb-0">Create and manage API keys for programmatic access to your storage</p>
+                </div>
+
+                <div class="card shadow">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                        <h5 class="m-0 font-weight-bold">Your API Keys</h5>
+                        <button id="createKeyBtn" class="btn btn-primary" {% if api_keys|length >= 5 %}disabled{% endif %}>
+                            <i class="bi bi-plus-circle"></i> Create New Key
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <p class="mb-1">You have {{ api_keys|length }}/5 API keys</p>
+                            <p class="api-keys-note mb-3"><i class="bi bi-shield-lock"></i> Keep your API keys secure. They provide full access to your account.</p>
+                        </div>
+
+                        {% if api_keys %}
+                            <div class="table-responsive">
+                                <table class="table table-hover api-keys-table">
+                                    <thead>
+                                        <tr>
+                                            <th>API Key</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for key in api_keys %}
+                                        <tr>
+                                            <td>
+                                                <div class="api-key-value">
+                                                    <code>{{ key[:8] }}...{{ key[-8:] }}</code>
+                                                    <button class="copy-btn btn btn-sm btn-secondary" data-key="{{ key }}">
+                                                        <i class="bi bi-clipboard"></i> Copy
+                                                    </button>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <button class="btn btn-sm btn-info text-white regenerate-btn" data-key="{{ key }}">
+                                                        <i class="bi bi-arrow-repeat"></i> Regenerate
+                                                    </button>
+                                                    <button class="btn btn-sm btn-danger delete-btn" data-key="{{ key }}">
+                                                        <i class="bi bi-trash"></i> Delete
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="empty-state">
+                                <i class="bi bi-key-fill fs-1 text-secondary mb-3"></i>
+                                <p class="mb-3">You don't have any API keys yet</p>
+                                <button id="createFirstKeyBtn" class="btn btn-primary">
+                                    <i class="bi bi-plus-circle"></i> Create your first API key
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Copy API key to clipboard
+            document.querySelectorAll('.copy-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const key = this.getAttribute('data-key');
+                    navigator.clipboard.writeText(key).then(() => {
+                        Swal.fire({
+                            title: 'Copied!',
+                            text: 'API key copied to clipboard',
+                            icon: 'success',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                    });
+                });
+            });
+
+            // Delete API key
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const key = this.getAttribute('data-key');
+                    Swal.fire({
+                        title: 'Delete API Key?',
+                        text: 'This action cannot be undone',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, delete it',
+                        cancelButtonText: 'Cancel'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            fetch('/api/keys', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    delete: true,
+                                    api_key: key
+                                })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.message) {
+                                    Swal.fire({
+                                        title: 'Deleted!',
+                                        text: 'API key has been deleted',
+                                        icon: 'success',
+                                        confirmButtonText: 'OK'
+                                    }).then(() => {
+                                        location.reload();
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        title: 'Error!',
+                                        text: data.error,
+                                        icon: 'error',
+                                        confirmButtonText: 'OK'
+                                    });
+                                }
+                            });
+                        }
+                    });
+                });
+            });
+
+            // Regenerate API key
+            document.querySelectorAll('.regenerate-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const key = this.getAttribute('data-key');
+                    Swal.fire({
+                        title: 'Regenerate API Key?',
+                        text: 'The current key will no longer work',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, regenerate it',
+                        cancelButtonText: 'Cancel'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            fetch('/api/keys', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    regenerate: true,
+                                    api_key: key
+                                })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.api_key) {
+                                    Swal.fire({
+                                        title: 'Success!',
+                                        html: `New API key:<br><strong>${data.api_key}</strong><br><br>Make sure to copy it now!`,
+                                        icon: 'success',
+                                        confirmButtonText: 'OK'
+                                    }).then(() => {
+                                        location.reload();
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        title: 'Error!',
+                                        text: data.error,
+                                        icon: 'error',
+                                        confirmButtonText: 'OK'
+                                    });
+                                }
+                            });
+                        }
+                    });
+                });
+            });
+
+            // Create new API key
+            const createKeyHandler = function() {
+                fetch('/api/keys', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        create: true
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.api_key) {
+                        Swal.fire({
+                            title: 'New API Key Created!',
+                            html: `Your new API key:<br><strong>${data.api_key}</strong><br><br>Make sure to copy it now!`,
+                            icon: 'success',
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: data.error,
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                });
+            };
+
+            // Create key buttons
+            document.getElementById('createKeyBtn')?.addEventListener('click', createKeyHandler);
+            document.getElementById('createFirstKeyBtn')?.addEventListener('click', createKeyHandler);
+        });
+    </script>
+</body>
+</html>

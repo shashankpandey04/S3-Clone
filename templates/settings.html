@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en"></html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - S3 Clone</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .sidebar {
+            min-height: calc(100vh - 56px);
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+        }
+        .nav-link {
+            color: #495057;
+        }
+        .nav-link.active {
+            background-color: #e9ecef;
+            color: #212529;
+        }
+        .section-header {
+            background: linear-gradient(135deg, #4b79a1, #283e51);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 0.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            margin-bottom: 1.5rem;
+        }
+        .profile-image {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: #4b79a1;
+        }
+        .danger-zone {
+            border-top: 1px solid #dee2e6;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">S3 Clone</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/mybuckets">Buckets</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/api/keys">API Keys</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/settings">Settings</a>
+                    </li>
+                </ul>
+                <div class="d-flex">
+                    <span class="navbar-text me-3"></span>
+                        <i class="bi bi-person-circle"></i> {{ user.first_name }} {{ user.last_name }}
+                    </span>
+                    <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-2 d-none d-lg-block sidebar pt-3">
+                <div class="d-flex flex-column p-3">
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-2 mb-2 text-muted">
+                        <span>Storage</span>
+                    </h6>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/dashboard">
+                                <i class="bi bi-speedometer2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/mybuckets">
+                                <i class="bi bi-bucket"></i> My Buckets
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/api/keys">
+                                <i class="bi bi-key"></i> API Keys
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-2 text-muted">
+                        <span>User</span>
+                    </h6>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/settings">
+                                <i class="bi bi-gear"></i> Settings
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/logout">
+                                <i class="bi bi-box-arrow-right"></i> Logout
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <main class="col-lg-10 col-md-12 ms-auto px-4 py-4">
+                <div class="section-header rounded shadow">
+                    <h2>Account Settings</h2>
+                    <p class="mb-0">Manage your profile and account preferences</p>
+                </div>
+
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h5 class="m-0 font-weight-bold">Profile Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="/settings">
+                            <div class="mb-4 d-flex align-items-center">
+                                <div class="profile-image">
+                                    <i class="bi bi-person"></i>
+                                </div>
+                                <div class="ms-4">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-upload"></i> Change avatar
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label for="first_name" class="form-label">First name</label>
+                                    <input type="text" class="form-control" id="firstname" name="firstname" value="{{ user.firstname if user.firstname else '' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="last_name" class="form-label">Last name</label>
+                                    <input type="text" class="form-control" id="lastname" name="lastname" value="{{ user.lastname if user.lastname else '' }}">
+                                </div>
+                                <div class="col-12">
+                                    <label for="email" class="form-label">Email address</label>
+                                    <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}">
+                                </div>
+                                <div class="col-12">
+                                    <label for="company" class="form-label">Company</label>
+                                    <input type="text" class="form-control" id="company" name="company" value="{{ user.company if user.company else '' }}">
+                                </div>
+                            </div>
+
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle"></i> Save changes
+                                </button>
+                            </div>
+                        </form>
+
+                        <div class="danger-zone">
+                            <h5 class="text-danger mb-3">Delete Account</h5>
+                            <p class="text-muted mb-3">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                Once you delete your account, there is no going back. Please be certain.
+                            </p>
+                            <button id="deleteAccountBtn" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Delete account
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const profileForm = document.querySelector('form[action="/settings"]');
+            profileForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // You can use fetch API for form submission
+                const formData = new FormData(profileForm);
+                fetch('/settings', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            title: 'Success!',
+                            text: 'Profile updated successfully',
+                            icon: 'success',
+                            confirmButtonText: 'OK'
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: data.error || 'Failed to update profile',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                });
+            });
+
+            // Handle delete account
+            document.getElementById('deleteAccountBtn').addEventListener('click', function() {
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: "You won't be able to revert this! All your data will be permanently deleted.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Yes, delete my account'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Handle account deletion
+                        fetch('/delete_account', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire(
+                                    'Deleted!',
+                                    'Your account has been deleted.',
+                                    'success'
+                                ).then(() => {
+                                    window.location.href = '/login';
+                                });
+                            } else {
+                                Swal.fire(
+                                    'Error!',
+                                    data.error || 'Failed to delete account',
+                                    'error'
+                                );
+                            }
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
