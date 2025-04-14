@@ -1,13 +1,15 @@
 from flask import Flask, request, jsonify, send_from_directory, render_template, redirect, url_for, flash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.utils import secure_filename
-from pymongo import MongoClient
 from functools import wraps
 import os
 import datetime
 import secrets
 from bson import ObjectId
 from dotenv import load_dotenv
+
+from Utils.utils import buckets_col, files_col, users_col, generate_api_key, get_bucket_path, bucket_exists
+from API.api import api_router
 
 load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
@@ -21,30 +23,12 @@ app.secret_key = SECRET_KEY
 BASE_STORAGE = "storage"
 os.makedirs(BASE_STORAGE, exist_ok=True)
 
-client = MongoClient(MONGO_URI)
-db = client["mini_s3"]
-buckets_col = db["buckets"]
-files_col = db["files"]
-users_col = db["users"]
-
-# ==== HELPERS ====
-def generate_api_key():
-    return secrets.token_hex(32)
-
-def get_user_by_api_key(api_key):
-    return users_col.find_one({"api_keys": api_key})
-
-def get_bucket_path(name, owner_id):
-    return os.path.join(BASE_STORAGE, f"{secure_filename(name)}_{owner_id}")
-
-def bucket_exists(name, owner_id):
-    return buckets_col.find_one({"name": name, "owner_id": owner_id}) is not None
-
 # ==== LOGIN MANAGER ====
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
+app.register_blueprint(api_router, url_prefix="/api")
 class User(UserMixin):
     def __init__(self, id, firstname, lastname, email, company, created_at):
         self.id = str(id)
@@ -145,6 +129,12 @@ def login():
         login_user(user)
         return redirect(url_for("dashboard"))
     return render_template("login.html")
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("login"))
 
 @app.route("/buckets", methods=["POST"])
 @login_required

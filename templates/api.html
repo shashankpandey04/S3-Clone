@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S3 Clone API Documentation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        .endpoint {
+            background-color: #f8f9fa;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+            border-radius: 4px;
+        }
+        .method {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .get { background-color: #61affe; color: white; }
+        .post { background-color: #49cc90; color: white; }
+        .delete { background-color: #f93e3e; color: white; }
+        code {
+            background-color: #f1f1f1;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        pre {
+            background-color: #f1f1f1;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .auth-note {
+            background-color: #fffbea;
+            padding: 10px;
+            border-left: 4px solid #ffd700;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>S3 Clone API Documentation</h1>
+    
+    <div class="auth-note">
+        <h3>Authentication</h3>
+        <p>All API endpoints require an API key passed in the header:</p>
+        <code>X-API-Key: your_api_key_here</code>
+    </div>
+
+    <h2>Buckets</h2>
+    
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <code>/api/buckets</code>
+        <h3>List Buckets</h3>
+        <p>Returns a list of all your buckets.</p>
+        
+        <h4>Response Example:</h4>
+        <pre>[
+  {
+    "name": "my-bucket",
+    "owner_id": "user123",
+    "created_at": "2023-07-15T14:32:21.123Z"
+  },
+  {
+    "name": "another-bucket",
+    "owner_id": "user123",
+    "created_at": "2023-07-16T09:45:11.456Z"
+  }
+]</pre>
+    </div>
+    
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <code>/api/buckets</code>
+        <h3>Create Bucket</h3>
+        <p>Creates a new bucket.</p>
+        
+        <h4>Request Body:</h4>
+        <pre>{
+  "name": "new-bucket-name"
+}</pre>
+        
+        <h4>Response Example:</h4>
+        <pre>{
+  "message": "Bucket created",
+  "name": "new-bucket-name"
+}</pre>
+    </div>
+    
+    <div class="endpoint">
+        <span class="method delete">DELETE</span>
+        <code>/api/buckets/{bucket}</code>
+        <h3>Delete Bucket</h3>
+        <p>Deletes a bucket and all its contents.</p>
+        
+        <h4>Path Parameters:</h4>
+        <table>
+            <tr>
+                <th>Parameter</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>bucket</td>
+                <td>The name of the bucket to delete</td>
+            </tr>
+        </table>
+        
+        <h4>Response Example:</h4>
+        <pre>{
+  "message": "Bucket deleted"
+}</pre>
+    </div>
+    
+    <h2>Files</h2>
+    
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <code>/api/buckets/{bucket}/files</code>
+        <h3>List Files</h3>
+        <p>Returns a list of all files in the specified bucket.</p>
+        
+        <h4>Path Parameters:</h4>
+        <table>
+            <tr>
+                <th>Parameter</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>bucket</td>
+                <td>The name of the bucket</td>
+            </tr>
+        </table>
+        
+        <h4>Response Example:</h4>
+        <pre>[
+  {
+    "bucket": "my-bucket",
+    "filename": "example.txt",
+    "path": "/path/to/file",
+    "is_public": false,
+    "uploaded_at": "2023-07-15T15:22:11.789Z",
+    "content_type": "text/plain",
+    "owner_id": "user123"
+  }
+]</pre>
+    </div>
+    
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <code>/api/buckets/{bucket}/files</code>
+        <h3>Upload File</h3>
+        <p>Uploads a file to the specified bucket.</p>
+        
+        <h4>Path Parameters:</h4>
+        <table>
+            <tr>
+                <th>Parameter</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>bucket</td>
+                <td>The name of the bucket</td>
+            </tr>
+        </table>
+        
+        <h4>Form Data:</h4>
+        <table>
+            <tr>
+                <th>Field</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>file</td>
+                <td>The file to upload</td>
+            </tr>
+            <tr>
+                <td>is_public</td>
+                <td>Set to "true" to make the file publicly accessible (default: "false")</td>
+            </tr>
+        </table>
+        
+        <h4>Response Example:</h4>
+        <pre>{
+  "message": "File uploaded",
+  "url": "/files/user123/my-bucket/example.txt"
+}</pre>
+    </div>
+    
+    <div class="endpoint">
+        <span class="method delete">DELETE</span>
+        <code>/api/buckets/{bucket}/files/{filename}</code>
+        <h3>Delete File</h3>
+        <p>Deletes a file from the specified bucket.</p>
+        
+        <h4>Path Parameters:</h4>
+        <table>
+            <tr>
+                <th>Parameter</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>bucket</td>
+                <td>The name of the bucket</td>
+            </tr>
+            <tr>
+                <td>filename</td>
+                <td>The name of the file to delete</td>
+            </tr>
+        </table>
+        
+        <h4>Response Example:</h4>
+        <pre>{
+  "message": "File deleted"
+}</pre>
+    </div>
+
+    <footer>
+        <p><small>S3 Clone API v1.0 - &copy; 2023</small></p>
+    </footer>
+</body>
+</html>
